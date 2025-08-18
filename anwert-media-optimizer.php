@@ -2,7 +2,7 @@
 /*
 Plugin Name: Anwert Media Optimizer
 Description: Converts uploaded media to WebP, regenerates thumbnails, replaces URLs, deletes old thumbnails, supports dry run, and gives control over image sizes.
-Version: 1.0.8
+Version: 1.0.9
 Author: Anwert (anwert.io)
 Author URI: https://anwert.io
 */
