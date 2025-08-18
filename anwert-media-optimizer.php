@@ -473,7 +473,7 @@ function ctw_as_process_file($path, $args)
     $logged = false;
 
     // Respect disabled sizes for generation
-    if (!empty($params['disabled_sizes'])) {
+    if (is_admin() && !empty($params['disabled_sizes'])) {
         add_filter('intermediate_image_sizes', function ($sizes) use ($params) {
             return array_diff($sizes, $params['disabled_sizes']);
         });
@@ -2003,7 +2003,9 @@ function ctw_render_log_section($id, $title, $entries, $open = false)
 
 
 // Disable generation of -scaled images (WordPress 5.3+)
-add_filter('big_image_size_threshold', '__return_false');
+if (is_admin()) {
+    add_filter('big_image_size_threshold', '__return_false');
+}
 
 
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($links) {
