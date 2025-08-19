@@ -2,7 +2,7 @@
 /*
 Plugin Name: Anwert Media Optimizer
 Description: Converts uploaded media to WebP, regenerates thumbnails, replaces URLs, deletes old thumbnails, supports dry run, and gives control over image sizes.
-Version: 1.0.9
+Version: 1.0.10
 Author: Anwert (anwert.io)
 Author URI: https://anwert.io
 */
@@ -334,21 +334,21 @@ function ctw_format_bytes($bytes)
 
 
 // Apply separate quality for main vs. thumbnails (webp only)
-add_filter('wp_editor_set_quality', 'ctw_filter_wp_editor_set_quality', 10, 3);
-function ctw_filter_wp_editor_set_quality($quality, $mime_type, $context)
-{
-    if ($mime_type === 'image/webp') {
-        $main  = (int) get_option('ctw_main_quality', 85);
-        $thumb = (int) get_option('ctw_thumb_quality', 70);
-        if ($context === 'image_resize') {
-            return $thumb; // thumbnails / subsizes
-        }
-        if ($context === 'upload') {
-            return $main; // original write
-        }
-    }
-    return $quality;
-}
+// add_filter('wp_editor_set_quality', 'ctw_filter_wp_editor_set_quality', 10, 3);
+// function ctw_filter_wp_editor_set_quality($quality, $mime_type, $context)
+// {
+//     if ($mime_type === 'image/webp') {
+//         $main  = (int) get_option('ctw_main_quality', 85);
+//         $thumb = (int) get_option('ctw_thumb_quality', 70);
+//         if ($context === 'image_resize') {
+//             return $thumb; // thumbnails / subsizes
+//         }
+//         if ($context === 'upload') {
+//             return $main; // original write
+//         }
+//     }
+//     return $quality;
+// }
 
 
 function ctw_ajax_job_status()
@@ -473,14 +473,14 @@ function ctw_as_process_file($path, $args)
     $logged = false;
 
     // Respect disabled sizes for generation
-    if (is_admin() && !empty($params['disabled_sizes'])) {
-        add_filter('intermediate_image_sizes', function ($sizes) use ($params) {
-            return array_diff($sizes, $params['disabled_sizes']);
-        });
-        add_filter('intermediate_image_sizes_advanced', function ($sizes) use ($params) {
-            return array_diff_key($sizes, array_flip($params['disabled_sizes']));
-        });
-    }
+    // if (is_admin() && !empty($params['disabled_sizes'])) {
+    //     add_filter('intermediate_image_sizes', function ($sizes) use ($params) {
+    //         return array_diff($sizes, $params['disabled_sizes']);
+    //     });
+    //     add_filter('intermediate_image_sizes_advanced', function ($sizes) use ($params) {
+    //         return array_diff_key($sizes, array_flip($params['disabled_sizes']));
+    //     });
+    // }
 
     // replicate per-file logic (simplified counts; no verbose logs in AS loop)
     $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
@@ -1099,24 +1099,24 @@ function ctw_render_admin_page()
                                                 if (!isset($_POST['enabled_sizes'])) {
                                                     $enabled_sizes = $all_sizes;
                                                 }
-                                                add_filter('intermediate_image_sizes', function ($sizes) use ($enabled_sizes) {
-                                                    return array_values(array_intersect($sizes, $enabled_sizes));
-                                                });
-                                                add_filter('intermediate_image_sizes_advanced', function ($sizes) use ($enabled_sizes) {
-                                                    return array_intersect_key($sizes, array_flip($enabled_sizes));
-                                                });
+                                                // add_filter('intermediate_image_sizes', function ($sizes) use ($enabled_sizes) {
+                                                //     return array_values(array_intersect($sizes, $enabled_sizes));
+                                                // });
+                                                // add_filter('intermediate_image_sizes_advanced', function ($sizes) use ($enabled_sizes) {
+                                                //     return array_intersect_key($sizes, array_flip($enabled_sizes));
+                                                // });
 
-                                                foreach ($all_sizes as $size):
-                                                    $width  = get_option("{$size}_size_w");
-                                                    $height = get_option("{$size}_size_h");
-                                                    $label = preg_match('/^\d+x\d+$/', $size) ? $size : "{$size} ({$width}x{$height})";
+                                                //foreach ($all_sizes as $size):
+                                                //    $width  = get_option("{$size}_size_w");
+                                                //    $height = get_option("{$size}_size_h");
+                                                //    $label = preg_match('/^\d+x\d+$/', $size) ? $size : "{$size} ({$width}x{$height})";
                                                 ?>
-                                                    <label style="margin-right: 10px; display:inline-block; margin-bottom:6px;">
+                                                    <!-- <label style="margin-right: 10px; display:inline-block; margin-bottom:6px;">
                                                         <input type="checkbox" name="enabled_sizes[]" value="<?= esc_attr($size) ?>"
                                                             <?= in_array($size, $enabled_sizes, true) ? 'checked' : '' ?>>
                                                         <?= esc_html($label) ?>
-                                                    </label>
-                                                <?php endforeach; ?>
+                                                    </label> -->
+                                                <?php //endforeach; ?>
                                             </div>
                                             <label><input type="checkbox" id="ctw-enable-resize" name="enable_resize" value="1" <?= !isset($_POST['enable_resize']) || $_POST['enable_resize'] ? 'checked' : '' ?>>Resize large images</label><br>
                                             <div id="ctw-threshold-row" style="<?= (isset($_POST['enable_resize']) && !$_POST['enable_resize']) ? 'display:none;' : '' ?>;margin-top:6px;">
@@ -2003,9 +2003,9 @@ function ctw_render_log_section($id, $title, $entries, $open = false)
 
 
 // Disable generation of -scaled images (WordPress 5.3+)
-if (is_admin()) {
-    add_filter('big_image_size_threshold', '__return_false');
-}
+// if (is_admin()) {
+//     add_filter('big_image_size_threshold', '__return_false');
+// }
 
 
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), function ($links) {
@@ -2094,9 +2094,4 @@ if (! function_exists('ctw_uninstall_plugin')) {
         ctw_cleanup_all_sites();
     }
 }
-register_uninstall_hook(__FILE__, 'ctw_uninstall_plugin');
-register_uninstall_hook(__FILE__, 'ctw_uninstall_plugin');
-register_uninstall_hook(__FILE__, 'ctw_uninstall_plugin');
-register_uninstall_hook(__FILE__, 'ctw_uninstall_plugin');
-register_uninstall_hook(__FILE__, 'ctw_uninstall_plugin');
 register_uninstall_hook(__FILE__, 'ctw_uninstall_plugin');
