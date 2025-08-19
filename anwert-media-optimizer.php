@@ -1091,8 +1091,8 @@ function ctw_render_admin_page()
                                         <td>
                                             <label><input type="checkbox" name="create_webp" value="1" <?= !isset($_POST['create_webp']) || $_POST['create_webp'] ? 'checked' : '' ?>>Create WebP versions</label><br><br>
                                             <!-- Inverted logic: "Create thumbnail sizes" -->
-                                            <div style="margin: 8px 0px 30px 0px;">
-                                                <label style="font-weight:600">Create thumbnail sizes</label><br><br>
+                                            <!-- <div style="margin: 8px 0px 30px 0px;"> -->
+                                                <!-- <label style="font-weight:600">Create thumbnail sizes</label><br><br> -->
                                                 <?php
                                                 $all_sizes = get_intermediate_image_sizes();
                                                 $enabled_sizes = isset($_POST['enabled_sizes']) ? (array)$_POST['enabled_sizes'] : $all_sizes;
@@ -1117,7 +1117,7 @@ function ctw_render_admin_page()
                                                         <?= esc_html($label) ?>
                                                     </label> -->
                                                 <?php //endforeach; ?>
-                                            </div>
+                                            <!-- </div> -->
                                             <label><input type="checkbox" id="ctw-enable-resize" name="enable_resize" value="1" <?= !isset($_POST['enable_resize']) || $_POST['enable_resize'] ? 'checked' : '' ?>>Resize large images</label><br>
                                             <div id="ctw-threshold-row" style="<?= (isset($_POST['enable_resize']) && !$_POST['enable_resize']) ? 'display:none;' : '' ?>;margin-top:6px;">
                                                 <label for="threshold">Resize long side to a maximum of (px): </label>
