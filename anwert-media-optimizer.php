@@ -525,7 +525,7 @@ function ctw_as_process_file($path, $args)
             // No return here, continue processing
         } else {
             $state['skipped']++;
-            ctw_log_skipped($state, $rel_key, 'Unattached media');
+            ctw_log_skipped($state, $rel_key, 'Referenced in DB');
             $logged = true;
             $state['processed']++;
             $state['done'][$rel_key] = true;
