@@ -1,7 +1,7 @@
 <?php
 /*
  * @wordpress-plugin
- * Plugin Name:    Anwert Media Optimizer
+ * Plugin Name:    Anwert Media Optimization
  * Description:    Converts uploaded media to WebP, regenerates thumbnails, replaces URLs, deletes old thumbnails, supports dry run, and gives control over image sizes.
  * Version:        1.0.10
  * Author:         Anwert
