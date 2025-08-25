@@ -1,11 +1,15 @@
 <?php
 /*
-Plugin Name: Anwert Media Optimizer
-Description: Converts uploaded media to WebP, regenerates thumbnails, replaces URLs, deletes old thumbnails, supports dry run, and gives control over image sizes.
-Version: 1.0.10
-Author: Anwert (anwert.io)
-Author URI: https://anwert.io
+ * @wordpress-plugin
+ * Plugin Name:    Anwert Media Optimizer
+ * Description:    Converts uploaded media to WebP, regenerates thumbnails, replaces URLs, deletes old thumbnails, supports dry run, and gives control over image sizes.
+ * Version:        1.0.10
+ * Author:         Anwert
+ * Author URI:     https://anwert.io
+ * License:        GPL-2.0+
+ * License URI:    http://www.gnu.org/licenses/gpl-2.0.txt
 */
+
 // --- GitHub Update Checker ---
 add_filter('pre_set_site_transient_update_plugins', 'anwert_github_update_checker');
 add_filter('plugins_api', 'anwert_github_plugin_api', 10, 3);
