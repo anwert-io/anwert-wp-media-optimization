@@ -6,6 +6,63 @@ Version: 1.0.10
 Author: Anwert (anwert.io)
 Author URI: https://anwert.io
 */
+// --- GitHub Update Checker ---
+add_filter('pre_set_site_transient_update_plugins', 'anwert_github_update_checker');
+add_filter('plugins_api', 'anwert_github_plugin_api', 10, 3);
+
+function anwert_github_update_checker($transient) {
+    if (empty($transient->checked)) return $transient;
+    $plugin_slug = 'anwert-media-optimizer/anwert-media-optimizer.php';
+    $github_api = 'https://api.github.com/repos/anwert-io/anwert-media-optimizer/releases/latest';
+    $response = wp_remote_get($github_api, [
+        'headers' => [ 'Accept' => 'application/vnd.github.v3+json' ]
+    ]);
+    if (is_wp_error($response)) return $transient;
+    $body = json_decode(wp_remote_retrieve_body($response));
+    if (empty($body->tag_name)) return $transient;
+    $latest_version = ltrim($body->tag_name, 'v');
+    if (!function_exists('get_plugin_data')) {
+        require_once(ABSPATH . 'wp-admin/includes/plugin.php');
+    }
+    $plugin_data = get_plugin_data(__FILE__);
+    if (version_compare($latest_version, $plugin_data['Version'], '>')) {
+        $transient->response[$plugin_slug] = (object) [
+            'slug' => $plugin_slug,
+            'plugin' => $plugin_slug,
+            'new_version' => $latest_version,
+            'url' => $body->html_url,
+            'package' => $body->assets[0]->browser_download_url ?? '',
+        ];
+    }
+    return $transient;
+}
+
+function anwert_github_plugin_api($result, $action, $args) {
+    if ($action !== 'plugin_information') return $result;
+    if ($args->slug !== 'anwert-media-optimizer') return $result;
+    $github_api = 'https://api.github.com/repos/anwert-io/anwert-media-optimizer/releases/latest';
+    $response = wp_remote_get($github_api, [
+        'headers' => [ 'Accept' => 'application/vnd.github.v3+json' ]
+    ]);
+    if (is_wp_error($response)) return $result;
+    $body = json_decode(wp_remote_retrieve_body($response));
+    if (empty($body->tag_name)) return $result;
+    $result = (object) [
+        'name' => 'Anwert Media Optimizer',
+        'slug' => 'anwert-media-optimizer',
+        'version' => ltrim($body->tag_name, 'v'),
+        'author' => '<a href="https://anwert.io">Anwert (anwert.io)</a>',
+        'homepage' => 'https://github.com/anwert-io/anwert-media-optimizer',
+        'download_link' => $body->assets[0]->browser_download_url ?? '',
+        'sections' => [
+            'description' => $body->body ?? '',
+            'changelog' => $body->body ?? '',
+        ],
+    ];
+    return $result;
+}
+
+// ...existing code...
 
 use WP_CLI;
 
@@ -953,6 +1010,7 @@ function ctw_render_admin_page()
     $folders = ctw_get_upload_folders();
     $upload_dir = wp_upload_dir();
     $uploads_path = is_array($upload_dir) && !empty($upload_dir['basedir']) ? $upload_dir['basedir'] : '';
+    $active_state = ctw_get_job_state();
 ?>
     <div class="wrap">
         <h1>Optimize Media</h1>
@@ -1687,105 +1745,97 @@ function ctw_render_admin_page()
                     if (resizeCb) resizeCb.addEventListener('change', updateThresholdVisibility);
                     updateThresholdVisibility();
 
-                    async function poll() {
-                        try {
-                            const fd = new FormData();
-                            fd.append('action', 'ctw_job_status');
-                            fd.append('nonce', CTW.nonce);
-                            const r = await fetch(CTW.ajax, {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                body: fd
-                            });
-                            const j = await r.json();
-                            if (j.success) updateUI(j.data);
-                        } catch (e) {}
-                    }
-                    let timer = setInterval(poll,  1200);
-                    poll();
+                    // --- Injected: Set UI to active run settings on page load ---
+                    (function() {
+                        // Only run if there's an active job state
+                        var activeState = <?php echo json_encode($active_state ?: null); ?>;
+                        if (!activeState || !activeState.params) return;
 
-                    const progressWrap = document.querySelector('.ctw-progress__wrap');
-                    startBtn?.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        if (!anyFolderChecked()) return;
-                        const fd = new FormData(form);
-                        fd.set('action', 'ctw_start_job');
-                        fd.append('nonce', CTW.nonce);
-                        try {
-                            const r = await fetch(CTW.ajax, {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                body: fd
+                        var params = activeState.params;
+                        // Set folders
+                        if (Array.isArray(params.folders)) {
+                            document.querySelectorAll('input[name="folders[]"]').forEach(function(cb) {
+                                cb.checked = params.folders.includes(cb.value);
                             });
-                            const j = await r.json();
-                            if (j.success) {
-                                if (progressWrap) progressWrap.style.display = '';
-                                if (bar) bar.style.width = '0%';
-                                if (txt) txt.textContent = 'Starting…';
-                                poll();
-                            } else {
-                                alert(j.data && j.data.message ? j.data.message : 'Failed to start');
-                            }
-                        } catch (err) {
-                            alert('Failed to start');
+                            // Cascade year checkboxes
+                            document.querySelectorAll('input[type="checkbox"][onclick^="toggleYear"]').forEach(function(cb) {
+                                var year = cb.getAttribute('onclick').match(/toggleYear\('([0-9]{4})'/);
+                                if (year && year[1]) {
+                                    var anyMonthChecked = !!document.querySelector('.folder-' + year[1] + ':checked');
+                                    cb.checked = anyMonthChecked;
+                                }
+                            });
                         }
-                    });
-
-                    const clearBtn = document.getElementById('ctw-clear-results');
-                    clearBtn?.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        const fd = new FormData();
-                        fd.append('action', 'ctw_clear_results');
-                        fd.append('nonce', CTW.nonce);
-                        try {
-                            const r = await fetch(CTW.ajax, {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                body: fd
-                            });
-                            const j = await r.json();
-                            if (j.success) {
-                                // Clear UI immediately
-                                if (resultsBox) resultsBox.innerHTML = '';
-                                if (bar) bar.style.width = '0%';
-                                if (txt) txt.textContent = '';
-                                // Hide progress bar
-                                if (progressWrap) progressWrap.style.display = 'none';
-
-                                // Re-enable Start if folders are selected
-                                startBtn.disabled = !anyFolderChecked();
-                                stopBtn.disabled = true;
-                            } else {
-                                alert('Could not clear results.');
-                            }
-                        } catch (err) {
-                            alert('Could not clear results.');
+                        // Set checkboxes and inputs
+                        function setCheckbox(name, val, defChecked) {
+                            var el = document.querySelector('[name="' + name + '"]');
+                            if (el) el.checked = !!val || (defChecked && typeof val === 'undefined');
                         }
-                    });
-
-                    stopBtn?.addEventListener('click', async (e) => {
-                        e.preventDefault();
-                        stopBtn.disabled = true; // 🔒 disable immediately on request
-                        const fd = new FormData();
-                        fd.append('action', 'ctw_cancel_job');
-                        fd.append('nonce', CTW.nonce);
-                        try {
-                            const r = await fetch(CTW.ajax, {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                body: fd
-                            });
-                            const j = await r.json();
-                            if (!j.success) {
-                                alert('Failed to cancel');
-                                return;
-                            }
-                            // Poll will update UI to 'cancelling' and keep Stop disabled
-                            poll();
-                        } catch (err) {
-                            alert('Failed to cancel');
+                        function setInput(name, val) {
+                            var el = document.querySelector('[name="' + name + '"]');
+                            if (el && typeof val !== 'undefined') el.value = val;
                         }
-                    });
+                        setCheckbox('enable_original_deletion', params.enable_original_deletion, true);
+                        setCheckbox('enable_thumb_deletion', params.enable_thumb_deletion, true);
+                        setCheckbox('delete_empty_folders', params.delete_empty_folders, true);
+                        setCheckbox('strip_meta', params.strip_meta, true);
+                        setCheckbox('ignore_unattached', params.ignore_unattached, true);
+                        setCheckbox('skip_if_larger', params.skip_if_larger, true);
+                        setCheckbox('create_webp', params.create_webp, true);
+                        setCheckbox('enable_resize', params.enable_resize, true);
+                        setCheckbox('dry_run', params.dry_run, true);
+                        setCheckbox('limit_files', params.limit_files, false);
+                        setInput('threshold', params.threshold);
+                        setInput('quality', params.quality);
+                        setInput('thumb_quality', params.thumb_quality);
+                        setInput('max_files', params.max_files);
+
+                        // Show/hide max_files input
+                        var limitCb = document.getElementById('ctw-limit-files');
+                        var maxInput = document.getElementById('ctw-max-files');
+                        if (limitCb && maxInput) {
+                            maxInput.style.display = limitCb.checked ? '' : 'none';
+                        }
+
+                        // Set excluded users
+                        if (Array.isArray(params.exclude_users)) {
+                            // Remove existing tokens/inputs
+                            document.querySelectorAll('#ctw-exclude-users input[name="exclude_users[]"]').forEach(function(h) { h.remove(); });
+                            document.querySelectorAll('.ctw-user-tokens .ctw-chip').forEach(function(chip) { chip.remove(); });
+                            params.exclude_users.forEach(function(uid) {
+                                // Add token (simulate user name as "User" if not available)
+                                var picker = document.getElementById('ctw-exclude-users');
+                                var tokensWrap = document.querySelector('.ctw-user-tokens');
+                                if (picker && tokensWrap) {
+                                    var token = document.createElement('span');
+                                    token.className = 'ctw-chip';
+                                    token.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#f0f0f1;border:1px solid #c3c4c7;padding:2px 8px;border-radius:16px;';
+                                    token.innerHTML = `<span>User (ID ${uid})</span> <button type="button" aria-label="Remove" style="border:none;background:none;cursor:pointer;">×</button>`;
+                                    token.querySelector('button').addEventListener('click', function() {
+                                        var hidden = picker.querySelector(`input[type="hidden"][name="exclude_users[]"][value="${uid}"]`);
+                                        if (hidden) hidden.remove();
+                                        token.remove();
+                                    });
+                                    tokensWrap.appendChild(token);
+                                    var hidden = document.createElement('input');
+                                    hidden.type = 'hidden';
+                                    hidden.name = 'exclude_users[]';
+                                    hidden.value = String(uid);
+                                    picker.appendChild(hidden);
+                                }
+                            });
+                        }
+
+                        // Refresh UI state
+                        if (typeof onFolderChange === 'function') onFolderChange();
+                        if (typeof updateStartLabel === 'function') updateStartLabel();
+                        var resizeCb = document.querySelector('#ctw-enable-resize');
+                        var thresholdRow = document.querySelector('#ctw-threshold-row');
+                        if (resizeCb && thresholdRow) {
+                            thresholdRow.style.display = (!resizeCb.checked) ? 'none' : '';
+                        }
+                    })();
+
                 })();
             </script>
         </form>
