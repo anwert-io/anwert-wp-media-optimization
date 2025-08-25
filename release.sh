@@ -166,13 +166,13 @@ git push github "$TAG"
 # ----------------------------
 # Create GitHub Release
 # ----------------------------
-echo "Creating GitHub release $TAG with asset $ASSET_FILE"
+echo "Creating GitHub release $TAG with asset $ASSET_FILE_PATH"
 if [[ "$USE_GENERATED_NOTES" == true ]]; then
-  gh release create "$TAG" "./${ASSET_FILE}" \
+  gh release create "$TAG" "$ASSET_FILE_PATH" \
     --title "$TAG" \
     --generate-notes
 else
-  gh release create "$TAG" "./${ASSET_FILE}" \
+  gh release create "$TAG" "$ASSET_FILE_PATH" \
     --title "$TAG" \
     --notes-file "$RELEASE_NOTES_FILE"
 fi
