@@ -1,3 +1,7 @@
+# If you want to run all of this with just 1 command, you can use the following:
+# git config --global alias.release '!./release.sh'
+# Then you can run all this with "git release" 
+
 #!/usr/bin/env bash
 set -euo pipefail
 
