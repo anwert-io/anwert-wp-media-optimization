@@ -107,24 +107,36 @@ if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
 fi
 
 # ----------------------------
-# Build ZIP asset
+# Build ZIP asset (write into repository's dist/ folder)
 # ----------------------------
-ASSET_FILE="${ASSET_DIR}/../dist/${ASSET_NAME_PREFIX}-${VERSION}.zip"
-echo "Building asset: $ASSET_FILE from $ASSET_DIR"
+ASSET_FILENAME="${ASSET_NAME_PREFIX}-${VERSION}.zip"
+
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+OUTPUT_DIR="$REPO_ROOT/dist"
+ASSET_FILE_PATH="$OUTPUT_DIR/$ASSET_FILENAME"
+
+echo "Building asset: $ASSET_FILENAME from $ASSET_DIR -> $ASSET_FILE_PATH"
 
 [[ -d "$ASSET_DIR" ]] || die "Asset directory not found: $ASSET_DIR"
 
+# Ensure output directory exists
+mkdir -p "$OUTPUT_DIR" || die "Could not create output directory: $OUTPUT_DIR"
+
+# Remove any previous artifact for this version
+if [[ -f "$ASSET_FILE_PATH" ]]; then
+  rm -f "$ASSET_FILE_PATH" || die "Could not remove existing asset: $ASSET_FILE_PATH"
+fi
+
 # Create a clean zip (excluding common junk)
-rm -f "$ASSET_FILE"
 (
-  cd "$ASSET_DIR/../dist"
-  # Zip the directory contents so the zip root is the plugin files (not the whole path)
-  zip -r "${ASSET_FILE}" . \
+  cd "$ASSET_DIR"
+  # Write the zip directly into the dist/ folder
+  zip -r "$ASSET_FILE_PATH" . \
     -x "*.DS_Store" \
     -x "*.git*" \
     -x "node_modules/*"
 )
-echo "Created $(pwd)/$ASSET_FILE"
+echo "Created $ASSET_FILE_PATH"
 
 # ----------------------------
 # Prepare release notes from CHANGELOG (if available)
