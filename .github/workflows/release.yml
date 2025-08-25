@@ -1,0 +1,96 @@
+# How to use:
+# git tag v1.2.3 && git push origin v1.2.3
+
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up zip
+        run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Detect version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          # Expecting tags like v1.2.3
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build zip artifact
+        run: |
+          ASSET_DIR="dist/plugin"
+          ASSET_NAME_PREFIX="anwert-media-optimizer"
+          VERSION="${{ steps.version.outputs.version }}"
+          ASSET_FILE="${ASSET_NAME_PREFIX}-${VERSION}.zip"
+
+          test -d "$ASSET_DIR" || { echo "Missing $ASSET_DIR"; exit 1; }
+
+          ( cd "$ASSET_DIR" && zip -r "../$ASSET_FILE" . \
+              -x "*.DS_Store" \
+              -x "*.git*" \
+              -x "node_modules/*" )
+
+          echo "asset_file=dist/${ASSET_FILE}" >> "$GITHUB_OUTPUT"
+        id: zip
+
+      - name: Extract notes from CHANGELOG.md (if available)
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CHANGELOG_FILE="CHANGELOG.md"
+          NOTES_FILE=".release-notes-${VERSION}.md"
+
+          if [[ -f "$CHANGELOG_FILE" ]]; then
+            awk -v ver="$VERSION" '
+              BEGIN {start=0}
+              /^##[[:space:]]*(\\[)?\"?\"?ver\"?\"?(\\])?[[:space:]]*(-[0-9]{4}-[0-9]{2}-[0-9]{2})?/ {
+                line=$0
+                gsub(/\\[/, "", line); gsub(/\\]/, "", line);
+                gsub(/\"/, "", line)
+                match(line, /^##[[:space:]]*([^[:space:]]+)/, m)
+                if (m[1] == ver) { start=1; next } else if (start==1) { exit } else { next }
+              }
+              start==1 { print }
+            ' "$CHANGELOG_FILE" | sed '1{/^$/d;}' > "$NOTES_FILE" || true
+
+            # Trim trailing blanks
+            sed -i -e :a -e '/^\\n*$/{$d;N;ba' -e '}' "$NOTES_FILE" || true
+
+            if [[ -s "$NOTES_FILE" ]]; then
+              echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+              echo "has_notes=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "No notes found for $VERSION in $CHANGELOG_FILE"
+          echo "has_notes=false" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: ${{ steps.notes.outputs.has_notes != 'true' }}
+          body_path: ${{ steps.notes.outputs.has_notes == 'true' && steps.notes.outputs.notes_file || '' }}
+          files: |
+            ${{ steps.zip.outputs.asset_file }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
