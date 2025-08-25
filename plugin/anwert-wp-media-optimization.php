@@ -43,8 +43,8 @@ function anwert_github_update_checker($transient) {
 
 function anwert_github_plugin_api($result, $action, $args) {
     if ($action !== 'plugin_information') return $result;
-    if ($args->slug !== 'anwert-media-optimizer') return $result;
-    $github_api = 'https://api.github.com/repos/anwert-io/anwert-media-optimizer/releases/latest';
+    if ($args->slug !== 'anwert-wp-media-optimization') return $result;
+    $github_api = 'https://api.github.com/repos/anwert-io/anwert-wp-media-optimization/releases/latest';
     $response = wp_remote_get($github_api, [
         'headers' => [ 'Accept' => 'application/vnd.github.v3+json' ]
     ]);
@@ -53,10 +53,10 @@ function anwert_github_plugin_api($result, $action, $args) {
     if (empty($body->tag_name)) return $result;
     $result = (object) [
         'name' => 'Anwert Media Optimizer',
-        'slug' => 'anwert-media-optimizer',
+        'slug' => 'anwert-wp-media-optimization',
         'version' => ltrim($body->tag_name, 'v'),
         'author' => '<a href="https://anwert.io">Anwert (anwert.io)</a>',
-        'homepage' => 'https://github.com/anwert-io/anwert-media-optimizer',
+        'homepage' => 'https://github.com/anwert-io/anwert-wp-media-optimization',
         'download_link' => $body->assets[0]->browser_download_url ?? '',
         'sections' => [
             'description' => $body->body ?? '',
@@ -1644,7 +1644,7 @@ function ctw_render_admin_page()
                                 const a = document.createElement('a');
                                 a.href = url;
                                 const date = (state.ended_at || state.started_at || '').replace(/[^0-9]/g, '').slice(0, 12);
-                                a.download = `media-optimizer-log${date ? '-' + date : ''}.txt`;
+                                a.download = `media-optimization-log${date ? '-' + date : ''}.txt`;
                                 document.body.appendChild(a);
                                 a.click();
                                 setTimeout(() => {
