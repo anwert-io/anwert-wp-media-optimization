@@ -87,9 +87,10 @@ if [[ "${1:-}" == "--version" ]]; then
   [[ -n "${VERSION}" ]] || die "Provide a version: --version X.Y.Z"
 else
   [[ -f "$PLUGIN_MAIN_FILE" ]] || die "Plugin main file not found at: $PLUGIN_MAIN_FILE"
-  VERSION=$(grep -E '^\s*\*\s*Version:\s*[0-9]+\.[0-9]+\.[0-9]+' "$PLUGIN_MAIN_FILE" \
+  # Use POSIX character class [[:space:]] for portability (macOS/BSD sed/grep don't support \s)
+  VERSION=$(grep -E '^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+' "$PLUGIN_MAIN_FILE" \
     | head -n1 \
-    | sed -E 's/^\s*\*\s*Version:\s*([0-9]+\.[0-9]+\.[0-9]+).*$/\1/')
+    | sed -E 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+).*$/\1/')
   [[ -n "$VERSION" ]] || die "Could not detect Version: from $PLUGIN_MAIN_FILE"
 fi
 
@@ -108,7 +109,7 @@ fi
 # ----------------------------
 # Build ZIP asset
 # ----------------------------
-ASSET_FILE="${ASSET_DIR}/../${ASSET_NAME_PREFIX}-${VERSION}.zip"
+ASSET_FILE="${ASSET_DIR}/../dist/${ASSET_NAME_PREFIX}-${VERSION}.zip"
 echo "Building asset: $ASSET_FILE from $ASSET_DIR"
 
 [[ -d "$ASSET_DIR" ]] || die "Asset directory not found: $ASSET_DIR"
@@ -116,7 +117,7 @@ echo "Building asset: $ASSET_FILE from $ASSET_DIR"
 # Create a clean zip (excluding common junk)
 rm -f "$ASSET_FILE"
 (
-  cd "$ASSET_DIR"
+  cd "$ASSET_DIR/../dist"
   # Zip the directory contents so the zip root is the plugin files (not the whole path)
   zip -r "${ASSET_FILE}" . \
     -x "*.DS_Store" \
