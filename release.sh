@@ -10,7 +10,7 @@ set -euo pipefail
 # ----------------------------
 PLUGIN_MAIN_FILE="plugin/anwert-wp-media-optimization.php"        # path to your main plugin file that has "Version:"
 ASSET_DIR="plugin"                                          # directory to zip
-ASSET_NAME_PREFIX="anwert-media-optimizer"                  # base name for the zip
+ASSET_NAME_PREFIX="anwert-media-optimization"                  # base name for the zip
 CHANGELOG_FILE="CHANGELOG.md"                               # changelog file to read release notes from (Keep a Changelog format)
 
 # ----------------------------
@@ -30,16 +30,21 @@ extract_changelog_section() {
   # If your changelog uses a different pattern, tweak the regex below.
   awk -v ver="$version" '
     BEGIN {start=0}
-    /^##[[:space:]]*(\[)?"?"?ver"?"?(\])?[[:space:]]*(-[0-9]{4}-[0-9]{2}-[0-9]{2})?/ {
+    /^##[[:space:]]*/ {
       # Normalize the line by stripping brackets and quotes for comparison
-      line=$0
+      line = $0
       gsub(/\[/, "", line); gsub(/\]/, "", line);
       gsub(/\"/, "", line)
-      # Extract the token after ##
-      match(line, /^##[[:space:]]*([^[:space:]]+)/, m)
-      if (m[1] == ver) { start=1; next } else if (start==1) { exit } else { next }
+      # Remove leading "##" and surrounding space
+      sub(/^##[[:space:]]*/, "", line)
+      # Split by whitespace and take first token as potential version
+      n = split(line, parts, /[[:space:]]+/)
+      token = (n >= 1) ? parts[1] : ""
+      if (token == ver) { start = 1; next }
+      else if (start == 1) { exit }
+      else { next }
     }
-    start==1 { print }
+    start == 1 { print }
   ' "$CHANGELOG_FILE" | sed '1{/^$/d;}' > "$out_file"
 
   # Trim trailing blank lines
@@ -156,7 +161,7 @@ echo "Creating annotated tag: $TAG"
 git tag -a "$TAG" -m "Release $TAG"
 
 echo "Pushing tag to origin"
-git push origin "$TAG"
+git push github "$TAG"
 
 # ----------------------------
 # Create GitHub Release
