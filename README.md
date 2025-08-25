@@ -1,4 +1,4 @@
-# Anwert Media Optimizer
+# Anwert Media Optimization for WordPress
 
 Lightweight PHP utility for optimizing media assets (images, videos) used in the Anwert project.
 
@@ -6,7 +6,7 @@ Lightweight PHP utility for optimizing media assets (images, videos) used in the
 
 ## What it does
 
-# Anwert Media Optimizer
+# Anwert Media Optimization
 
 - PHP 7.4+ (or the PHP version used by your project)
 
