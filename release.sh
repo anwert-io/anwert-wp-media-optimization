@@ -8,7 +8,7 @@ set -euo pipefail
 # ----------------------------
 # Config — adjust if needed
 # ----------------------------
-PLUGIN_MAIN_FILE="/anwert-wp-media-optimization.php"        # path to your main plugin file that has "Version:"
+PLUGIN_MAIN_FILE="plugin/anwert-wp-media-optimization.php"        # path to your main plugin file that has "Version:"
 ASSET_DIR="plugin"                                          # directory to zip
 ASSET_NAME_PREFIX="anwert-media-optimizer"                  # base name for the zip
 CHANGELOG_FILE="CHANGELOG.md"                               # changelog file to read release notes from (Keep a Changelog format)
