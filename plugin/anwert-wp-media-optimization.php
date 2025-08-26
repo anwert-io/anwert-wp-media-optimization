@@ -6,24 +6,68 @@
  * Version:        1.0.13
  * Author:         Anwert
  * Author URI:     https://anwert.io
+ * Plugin URI:     https://github.com/anwert-io/anwert-wp-media-optimization
  * License:        GPL-2.0+
  * License URI:    http://www.gnu.org/licenses/gpl-2.0.txt
 */
 
 // --- GitHub Update Checker ---
+
+if (!defined('ANWERT_GITHUB_REPO')) {
+    define('ANWERT_GITHUB_REPO', 'anwert-io/anwert-wp-media-optimization');
+}
+if (!defined('ANWERT_PLUGIN_SLUG')) {
+    define('ANWERT_PLUGIN_SLUG', 'anwert-wp-media-optimization');
+}
+if (!defined('ANWERT_PLUGIN_BASENAME')) {
+    define('ANWERT_PLUGIN_BASENAME', plugin_basename(__FILE__));
+}
+if (!defined('ANWERT_PLUGIN_NAME')) {
+    define('ANWERT_PLUGIN_NAME', 'Anwert Media Optimization');
+}
+if (!defined('ANWERT_GITHUB_USER_AGENT')) {
+    define('ANWERT_GITHUB_USER_AGENT', 'Anwert Media Optimizer');
+}
+if (!defined('ANWERT_GITHUB_HOMEPAGE')) {
+    define('ANWERT_GITHUB_HOMEPAGE', 'https://github.com/anwert-io/anwert-wp-media-optimization');
+}
+
 add_filter('pre_set_site_transient_update_plugins', 'anwert_github_update_checker');
 add_filter('plugins_api', 'anwert_github_plugin_api', 10, 3);
 
+/**
+ * Fetch and decode the latest GitHub release JSON for the project.
+ * Returns decoded object on success or null on any failure.
+ *
+ * @return object|null
+ */
+function anwert_github_get_latest_release(): ?object {
+    $github_api = "https://api.github.com/repos/" . ANWERT_GITHUB_REPO . "/releases/latest";
+
+    $response = wp_remote_get($github_api, [
+        'headers' => [
+            'Accept' => 'application/vnd.github.v3+json',
+            // set a simple User-Agent to be well behaved with the API
+            'User-Agent' => ANWERT_GITHUB_USER_AGENT,
+        ],
+        'timeout' => 15,
+    ]);
+    if (is_wp_error($response)) return null;
+    $body_raw = wp_remote_retrieve_body($response);
+    if (empty($body_raw)) return null;
+    $body = json_decode($body_raw);
+    if (!is_object($body) || empty($body->tag_name)) return null;
+    return $body;
+}
+
 function anwert_github_update_checker($transient) {
     if (empty($transient->checked)) return $transient;
-    $plugin_slug = 'anwert-wp-media-optimization/anwert-wp-media-optimization.php';
-    $github_api = 'https://api.github.com/repos/anwert-io/anwert-wp-media-optimization/releases/latest';
-    $response = wp_remote_get($github_api, [
-        'headers' => [ 'Accept' => 'application/vnd.github.v3+json' ]
-    ]);
-    if (is_wp_error($response)) return $transient;
-    $body = json_decode(wp_remote_retrieve_body($response));
-    if (empty($body->tag_name)) return $transient;
+    // Use plugin_basename(__FILE__) as the key that WordPress expects
+    $plugin_slug = ANWERT_PLUGIN_BASENAME;
+
+    $body = anwert_github_get_latest_release();
+    if (empty($body)) return $transient;
+
     $latest_version = ltrim($body->tag_name, 'v');
     if (!function_exists('get_plugin_data')) {
         require_once(ABSPATH . 'wp-admin/includes/plugin.php');
@@ -31,8 +75,8 @@ function anwert_github_update_checker($transient) {
     $plugin_data = get_plugin_data(__FILE__);
     if (version_compare($latest_version, $plugin_data['Version'], '>')) {
         $transient->response[$plugin_slug] = (object) [
-            'slug' => $plugin_slug,
-            'plugin' => $plugin_slug,
+            'slug' => ANWERT_PLUGIN_BASENAME,
+            'plugin' => ANWERT_PLUGIN_BASENAME,
             'new_version' => $latest_version,
             'url' => $body->html_url,
             'package' => $body->assets[0]->browser_download_url ?? '',
@@ -43,20 +87,17 @@ function anwert_github_update_checker($transient) {
 
 function anwert_github_plugin_api($result, $action, $args) {
     if ($action !== 'plugin_information') return $result;
-    if ($args->slug !== 'anwert-wp-media-optimization') return $result;
-    $github_api = 'https://api.github.com/repos/anwert-io/anwert-wp-media-optimization/releases/latest';
-    $response = wp_remote_get($github_api, [
-        'headers' => [ 'Accept' => 'application/vnd.github.v3+json' ]
-    ]);
-    if (is_wp_error($response)) return $result;
-    $body = json_decode(wp_remote_retrieve_body($response));
-    if (empty($body->tag_name)) return $result;
+    if (empty($args->slug) || $args->slug !== ANWERT_PLUGIN_SLUG) return $result;
+
+    $body = anwert_github_get_latest_release();
+    if (empty($body)) return $result;
+
     $result = (object) [
-        'name' => 'Anwert Media Optimizer',
-        'slug' => 'anwert-wp-media-optimization',
+        'name' => ANWERT_PLUGIN_NAME,
+        'slug' => ANWERT_PLUGIN_SLUG,
         'version' => ltrim($body->tag_name, 'v'),
         'author' => '<a href="https://anwert.io">Anwert (anwert.io)</a>',
-        'homepage' => 'https://github.com/anwert-io/anwert-wp-media-optimization',
+        'homepage' => ANWERT_GITHUB_HOMEPAGE,
         'download_link' => $body->assets[0]->browser_download_url ?? '',
         'sections' => [
             'description' => $body->body ?? '',
