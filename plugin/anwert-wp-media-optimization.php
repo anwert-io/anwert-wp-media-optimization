@@ -2,14 +2,19 @@
 /*
  * @wordpress-plugin
  * Plugin Name:    Anwert Media Optimization
+ * Plugin URI:     https://github.com/anwert-io/anwert-wp-media-optimization
  * Description:    Converts uploaded media to WebP, regenerates thumbnails, replaces URLs, deletes old thumbnails, supports dry run, and gives control over image sizes.
  * Version:        1.0.13
  * Author:         Anwert
  * Author URI:     https://anwert.io
- * Plugin URI:     https://github.com/anwert-io/anwert-wp-media-optimization
  * License:        GPL-2.0+
  * License URI:    http://www.gnu.org/licenses/gpl-2.0.txt
 */
+
+// If this file is called directly, abort.
+if (!defined('WPINC')) {
+    die;
+}
 
 // --- GitHub Update Checker ---
 
@@ -120,15 +125,18 @@ function ctw_user_can(): bool
 }
 
 add_action('admin_menu', function () {
-    if (is_network_admin()) return; // keep UI per site
+    if (is_network_admin()) {
+        return; 
+    }
+
     if (ctw_user_can()) {
         add_management_page(
-            'Optimize Media',
-            'Optimize Media',
-            'manage_options',
-            'optimize-media',
-            'ctw_render_admin_page'
-        );
+            page_title: 'Optimize Media',
+            menu_title: 'Optimize Media',
+            capability: 'manage_options',
+            menu_slug: $this->plugin_name,
+            callback: [$this, 'settings_page']
+        );        
     }
 });
 
@@ -1047,7 +1055,7 @@ function ctw_get_upload_folders()
 }
 
 
-function ctw_render_admin_page()
+function settings_page()
 {
     if (! ctw_user_can()) {
         wp_die(__('Sorry, you are not allowed to access this page.', 'anwert-image-optimizer'));
